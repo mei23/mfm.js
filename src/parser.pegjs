@@ -88,6 +88,9 @@ plainParser
 inlineParser
 	= nodes:(&. n:inline { return n; })* { return mergeText(nodes); }
 
+basicParser
+	= nodes:(&. n:inlineBasic { return n; })* { return mergeText(nodes); }
+
 //
 // syntax list
 //
@@ -143,6 +146,16 @@ inlineWithoutFn
 	/ strike
 	/ inlineCode
 	/ mathInline
+	/ mention
+	/ hashtag
+	/ url
+	/ link
+	/ inlineText
+
+inlineBasic
+	= emojiCode
+	/ unicodeEmoji
+	/ inlineCode
 	/ mention
 	/ hashtag
 	/ url

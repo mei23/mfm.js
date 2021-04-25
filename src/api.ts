@@ -20,6 +20,11 @@ export function parsePlain(input: string): MfmPlainNode[] {
 	return nodes;
 }
 
+export function parseBasic(input: string): MfmPlainNode[] {
+	const nodes = parser.parse(input, { startRule: 'basicParser' });
+	return nodes;
+}
+
 /**
  * Generates a MFM string from the MfmNode tree.
 */
