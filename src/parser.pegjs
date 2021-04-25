@@ -131,7 +131,7 @@ quoteInner
 	/ line:quoteLine
 {
 	const children = applyParser(line, 'fullParser');
-	return QUOTE(children);
+	return createNode('quote', null, children);
 }
 
 quoteMultiLine
@@ -438,7 +438,10 @@ fnVer1
 	= "[" name:$([a-z0-9_]i)+ args:fnArgs? _ content:fnContentPart+ "]"
 {
 	args = args || {};
-	return FN(name, args, mergeText(content));
+	return createNode('fn', {
+		name: name,
+		args: args
+	}, mergeText(content));
 }
 
 fnVer2
