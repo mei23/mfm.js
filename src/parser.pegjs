@@ -1,10 +1,51 @@
 {
-	const {
-		createNode,
-		mergeText,
-		setConsumeCount,
-		consumeDynamically
-	} = require('./util');
+	function createNode(type, props, children) {
+		const node = { type };
+		if (props != null) {
+			node.props = props;
+		}
+		if (children != null) {
+			node.children = children;
+		}
+		return node;
+	}
+
+	function mergeText(nodes) {
+		const dest = [];
+		const storedChars = [];
+		function generateText() {
+			if (storedChars.length > 0) {
+				const textNode = createNode('text', { text: storedChars.join('') });
+				dest.push(textNode);
+				storedChars.length = 0;
+			}
+		}
+		for (const node of nodes) {
+			if (typeof node == 'string') {
+				storedChars.push(node);
+			}
+			else {
+				generateText();
+				dest.push(node);
+			}
+		}
+		generateText();
+		return dest;
+	}
+
+	let consumeCount = 0;
+
+	function setConsumeCount(count) {
+		consumeCount = count;
+	}
+
+	function consumeDynamically() {
+		const matched = (consumeCount > 0);
+		if (matched) {
+			consumeCount--;
+		}
+		return matched;
+	}
 
 	function applyParser(input, startRule) {
 		let parseFunc = peg$parse;
