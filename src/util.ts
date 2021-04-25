@@ -1,4 +1,4 @@
-import { isMfmBlock, MfmNode, TEXT } from './node';
+import { isMfmBlock, MfmNode } from './node';
 
 export function createNode(type: string, props?: Record<string, any>, children?: MfmNode[]): MfmNode {
 	const node: any = { type };
@@ -20,7 +20,8 @@ export function mergeText(nodes: (MfmNode | string)[]): MfmNode[] {
 	*/
 	function generateText() {
 		if (storedChars.length > 0) {
-			dest.push(TEXT(storedChars.join('')));
+			const textNode = createNode('text', { text: storedChars.join('') });
+			dest.push(textNode);
 			storedChars.length = 0;
 		}
 	}
@@ -149,7 +150,7 @@ export function stringifyTree(nodes: MfmNode[]): string {
 			state = stringifyState.inline;
 		}
 		if (pushLf) {
-			dest.push(TEXT('\n'));
+			dest.push(createNode('text', { text: '\n' }));
 		}
 
 		dest.push(node);

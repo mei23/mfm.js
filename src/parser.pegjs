@@ -1,30 +1,6 @@
 {
 	const {
-		// block
-		QUOTE,
-		SEARCH,
-		CODE_BLOCK,
-		MATH_BLOCK,
-		CENTER,
-
-		// inline
-		UNI_EMOJI,
-		EMOJI_CODE,
-		BOLD,
-		SMALL,
-		ITALIC,
-		STRIKE,
-		INLINE_CODE,
-		MATH_INLINE,
-		MENTION,
-		HASHTAG,
-		N_URL,
-		LINK,
-		FN,
-		TEXT
-	} = require('./node');
-
-	const {
+		createNode,
 		mergeText,
 		setConsumeCount,
 		consumeDynamically
@@ -150,7 +126,7 @@ quoteInner
 	= head:quoteMultiLine tails:quoteMultiLine+
 {
 	const children = applyParser([head, ...tails].join('\n'), 'fullParser');
-	return QUOTE(children);
+	return createNode('quote', null, children);
 }
 	/ line:quoteLine
 {
@@ -172,7 +148,10 @@ quoteEmptyLine
 search
 	= BEGIN q:searchQuery sp:_ key:searchKey END
 {
-	return SEARCH(q, `${ q }${ sp }${ key }`);
+	return createNode('search', {
+		query: q,
+		content: `${ q }${ sp }${ key }`
+	});
 }
 
 searchQuery
@@ -189,7 +168,10 @@ codeBlock
 	= BEGIN "```" lang:$(CHAR*) LF code:codeBlockContent LF "```" END
 {
 	lang = lang.trim();
-	return CODE_BLOCK(code, lang.length > 0 ? lang : null);
+	return createNode('blockCode', {
+		code: code,
+		lang: lang.length > 0 ? lang : null,
+	});
 }
 
 codeBlockContent
@@ -201,7 +183,9 @@ codeBlockContent
 mathBlock
 	= BEGIN "\\[" LF? formula:mathBlockLines LF? "\\]" END
 {
-	return MATH_BLOCK(formula.trim());
+	return createNode('mathBlock', {
+		formula: formula.trim()
+	});
 }
 
 mathBlockLines
@@ -216,7 +200,7 @@ mathBlockLine
 center
 	= BEGIN "<center>" LF? content:(!(LF? "</center>" END) i:inline { return i; })+ LF? "</center>" END
 {
-	return CENTER(mergeText(content));
+	return createNode('center', null, mergeText(content));
 }
 
 //
@@ -228,7 +212,7 @@ center
 emojiCode
 	= ":" name:emojiCodeName ":"
 {
-	return EMOJI_CODE(name);
+	return createNode('emojiCode', { name: name });
 }
 
 emojiCodeName
@@ -240,7 +224,7 @@ emojiCodeName
 unicodeEmoji
 	= &{ return matchUnicodeEmoji(); } (&{ return consumeDynamically(); } .)+
 {
-	return UNI_EMOJI(text());
+	return createNode('unicodeEmoji', { emoji: text() });
 }
 
 // inline: big
@@ -248,7 +232,10 @@ unicodeEmoji
 big
 	= "***" content:(!"***" i:inline { return i; })+ "***"
 {
-	return FN('tada', { }, mergeText(content));
+	return createNode('fn', {
+		name: 'tada',
+		args: { }
+	}, mergeText(content));
 }
 
 // inline: bold
@@ -256,12 +243,12 @@ big
 bold
 	= "**" content:(!"**" i:inline { return i; })+ "**"
 {
-	return BOLD(mergeText(content));
+	return createNode('bold', null, mergeText(content));
 }
 	/ "__" content:$(!"__" c:([a-z0-9]i / _) { return c; })+ "__"
 {
 	const parsedContent = applyParser(content, 'inlineParser');
-	return BOLD(parsedContent);
+	return createNode('bold', null, parsedContent);
 }
 
 // inline: small
@@ -269,7 +256,7 @@ bold
 small
 	= "<small>" content:(!"</small>" i:inline { return i; })+ "</small>"
 {
-	return SMALL(mergeText(content));
+	return createNode('small', null, mergeText(content));
 }
 
 // inline: italic
@@ -281,19 +268,19 @@ italic
 italicTag
 	= "<i>" content:(!"</i>" i:inline { return i; })+ "</i>"
 {
-	return ITALIC(mergeText(content));
+	return createNode('italic', null, mergeText(content));
 }
 
 italicAlt
 	= "*" content:$(!"*" ([a-z0-9]i / _))+ "*" &(EOF / LF / _)
 {
 	const parsedContent = applyParser(content, 'inlineParser');
-	return ITALIC(parsedContent);
+	return createNode('italic', null, parsedContent);
 }
 	/ "_" content:$(!"_" ([a-z0-9]i / _))+ "_" &(EOF / LF / _)
 {
 	const parsedContent = applyParser(content, 'inlineParser');
-	return ITALIC(parsedContent);
+	return createNode('italic', null, parsedContent);
 }
 
 // inline: strike
@@ -301,7 +288,7 @@ italicAlt
 strike
 	= "~~" content:(!("~" / LF) i:inline { return i; })+ "~~"
 {
-	return STRIKE(mergeText(content));
+	return createNode('strike', null, mergeText(content));
 }
 
 // inline: inlineCode
@@ -309,7 +296,9 @@ strike
 inlineCode
 	= "`" content:$(!"`" c:CHAR { return c; })+ "`"
 {
-	return INLINE_CODE(content);
+	return createNode('inlineCode', {
+		code: content
+	});
 }
 
 // inline: mathInline
@@ -317,7 +306,9 @@ inlineCode
 mathInline
 	= "\\(" content:$(!"\\)" c:CHAR { return c; })+ "\\)"
 {
-	return MATH_INLINE(content);
+	return createNode('mathInline', {
+		formula: content
+	});
 }
 
 // inline: mention
@@ -325,7 +316,11 @@ mathInline
 mention
 	= "@" name:mentionName host:("@" host:mentionHost { return host; })?
 {
-	return MENTION(name, host, text());
+	return createNode('mention', {
+		username: name,
+		host: host,
+		acct: text()
+	});
 }
 
 mentionName
@@ -353,7 +348,7 @@ mentionHostPart
 hashtag
 	= "#" !("\uFE0F"? "\u20E3") content:hashtagContent
 {
-	return HASHTAG(content);
+	return createNode('hashtag', { hashtag: content });
 }
 
 hashtagContent
@@ -378,11 +373,11 @@ hashtagChar
 url
 	= "<" url:urlFormat ">"
 {
-	return N_URL(url);
+	return createNode('url', { url: url });
 }
 	/ url:urlFormat
 {
-	return N_URL(url);
+	return createNode('url', { url: url });
 }
 
 urlFormat
@@ -412,7 +407,10 @@ urlContentPart
 link
 	= silent:"?"? "[" label:linkLabel "](" url:linkUrl ")"
 {
-	return LINK((silent != null), url, mergeText(label));
+	return createNode('link', {
+		silent: (silent != null),
+		url: url
+	}, mergeText(label));
 }
 
 linkLabel
@@ -447,7 +445,10 @@ fnVer2
 	= "$[" name:$([a-z0-9_]i)+ args:fnArgs? _ content:fnContentPart+ "]"
 {
 	args = args || {};
-	return FN(name, args, mergeText(content));
+	return createNode('fn', {
+		name: name,
+		args: args
+	}, mergeText(content));
 }
 
 fnArgs
